@@ -1,0 +1,31 @@
+[project]
+name = "brain-uad"
+version = "0.1.0"
+description = "Unsupervised anomaly detection in brain MRI: healthy-anatomy models trained on IXI, evaluated on brain tumours"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "torch>=2.9",
+    "numpy>=1.26",
+    "nibabel>=5.2",
+    "SimpleITK>=2.3",
+    "antspyx>=0.5",
+    "hd-bet>=2.0",
+    "scipy>=1.13",
+    "scikit-learn>=1.5",
+    "pandas>=2.2",
+    "opensimplex>=0.4",
+    "numba>=0.60",
+    "tqdm>=4.66",
+    "matplotlib>=3.9",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu130" }]
+
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true

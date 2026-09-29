@@ -1,0 +1,8 @@
+.venv/
+/data/
+/logs/
+/results/
+__pycache__/
+.DS_Store
+/third_party/
+/splits.json

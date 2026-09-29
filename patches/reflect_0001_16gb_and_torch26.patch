@@ -1,0 +1,140 @@
+diff --git a/evaluate_REFLECT.py b/evaluate_REFLECT.py
+index d79c23c..c11688c 100644
+--- a/evaluate_REFLECT.py
++++ b/evaluate_REFLECT.py
+@@ -138,7 +138,7 @@ def main(args):
+         
+     model = UNET_models[args.model](in_channels=in_channels, out_channels=out_channels)
+     try:
+-        state_dict = torch.load(args.model_path)['model']
++        state_dict = torch.load(args.model_path, weights_only=False)['model']
+         print(model.load_state_dict(state_dict))
+     except:
+         raise Exception('Provided trained model path could not be found or it is not consistent with model params.')
+@@ -148,13 +148,13 @@ def main(args):
+ 
+     if args.vae == 'kl_f4':
+         vae_model_path = hf_hub_download(repo_id="farzadbz/Medical-VAE", filename="VAE-Medical-klf4.pt")
+-        vae = torch.load(vae_model_path)
++        vae = torch.load(vae_model_path, weights_only=False)
+         embedding_dim = 3
+         compression_factor = 4
+         
+     elif args.vae == 'kl_f8':
+         vae_model_path = hf_hub_download(repo_id="farzadbz/Medical-VAE", filename="VAE-Medical-klf8.pt")
+-        vae = torch.load(vae_model_path)
++        vae = torch.load(vae_model_path, weights_only=False)
+         embedding_dim = 4
+         compression_factor = 8
+         
+diff --git a/train_REFLECT-2.py b/train_REFLECT-2.py
+index 2117900..6d99f2e 100644
+--- a/train_REFLECT-2.py
++++ b/train_REFLECT-2.py
+@@ -112,7 +112,7 @@ def main(args):
+ 
+     try:
+         ckpt = args.REFLECT_1_path
+-        state_dict = torch.load(ckpt)['model']
++        state_dict = torch.load(ckpt, weights_only=False)['model']
+     except:
+         raise Exception('REFLECT-1 trained model could not be found or it is not consistent with model params.')
+     
+@@ -128,14 +128,14 @@ def main(args):
+ 
+     if args.vae == 'kl_f4':
+         vae_model_path = hf_hub_download(repo_id="farzadbz/Medical-VAE", filename="VAE-Medical-klf4.pt")
+-        vae = torch.load(vae_model_path)
++        vae = torch.load(vae_model_path, weights_only=False)
+         embedding_dim = 3
+         compression_factor = 4
+ 
+ 
+     elif args.vae == 'kl_f8':
+         vae_model_path = hf_hub_download(repo_id="farzadbz/Medical-VAE", filename="VAE-Medical-klf8.pt")
+-        vae = torch.load(vae_model_path)
++        vae = torch.load(vae_model_path, weights_only=False)
+         embedding_dim = 4
+         compression_factor = 8
+         
+@@ -198,7 +198,7 @@ def main(args):
+             t = torch.rand(x.size(0), 1).to(torch.float32)
+             with torch.no_grad():
+                 # Map input images to latent space + normalize latents:
+-                z1 = vae.encode(x).sample().mul_(0.18215)
++                z1 = torch.cat([vae.encode(c).sample() for c in x.split(16)]).mul_(0.18215)
+                 z_0 = torch.sqrt((1-mask)) * z1 + torch.sqrt(mask) * replacement
+                 
+                 z1_2 = deepcopy(z_0)
+@@ -212,10 +212,13 @@ def main(args):
+                 target_velocity = z1_2 - z_0
+                 z_t = z_0 + t.view(-1, 1, 1, 1).to(device) * target_velocity
+                 
+-            pred_velocity = model(z_t, t)  # Flatten spatial dimensions
+-        
+-            loss = F.mse_loss(pred_velocity, target_velocity)
+-            loss.backward()
++            # micro-batches of 48 with size-weighted losses: the same gradient as
++            # the full batch (GroupNorm only), within 16 GB
++            loss = 0.0
++            for zc, tc, vc in zip(z_t.split(48), t.split(48), target_velocity.split(48)):
++                lc = F.mse_loss(model(zc, tc), vc) * (zc.shape[0] / z_t.shape[0])
++                lc.backward()
++                loss += lc.detach()
+             
+             if (ii + 1) % accumulation_steps == 0:
+                 opt.step()
+diff --git a/train_REFLECT.py b/train_REFLECT.py
+index b6a5011..c1657a6 100644
+--- a/train_REFLECT.py
++++ b/train_REFLECT.py
+@@ -106,7 +106,7 @@ def main(args):
+     if args.last_trained_epoch != 0 :
+         try:
+             ckpt = sorted(glob(f'{args.results_dir}/*/checkpoints/last.pt'))[-1]
+-            state_dict = torch.load(ckpt)['model']
++            state_dict = torch.load(ckpt, weights_only=False)['model']
+             logger.info(model.load_state_dict(state_dict))
+             logger.info(f'*** A trained model found, starting from epoch {args.last_trained_epoch} ***')
+         except:
+@@ -126,14 +126,14 @@ def main(args):
+ 
+     if args.vae == 'kl_f4':
+         vae_model_path = hf_hub_download(repo_id="farzadbz/Medical-VAE", filename="VAE-Medical-klf4.pt")
+-        vae = torch.load(vae_model_path)
++        vae = torch.load(vae_model_path, weights_only=False)
+         embedding_dim = 3
+         compression_factor = 4
+ 
+ 
+     elif args.vae == 'kl_f8':
+         vae_model_path = hf_hub_download(repo_id="farzadbz/Medical-VAE", filename="VAE-Medical-klf8.pt")
+-        vae = torch.load(vae_model_path)
++        vae = torch.load(vae_model_path, weights_only=False)
+         embedding_dim = 4
+         compression_factor = 8
+         
+@@ -197,15 +197,18 @@ def main(args):
+             t = torch.rand(x.size(0), 1).to(torch.float32)
+             with torch.no_grad():
+                 # Map input images to latent space + normalize latents:
+-                z1 = vae.encode(x).sample().mul_(0.18215)
++                z1 = torch.cat([vae.encode(c).sample() for c in x.split(16)]).mul_(0.18215)
+                 z_0 = torch.sqrt((1-mask)) * z1 + torch.sqrt(mask) * replacement
+                 target_velocity = z1 - z_0
+                 z_t = z_0 + t.view(-1, 1, 1, 1).to(device) * target_velocity
+                 
+-            pred_velocity = model(z_t, t)  # Flatten spatial dimensions
+-        
+-            loss = F.mse_loss(pred_velocity, target_velocity)
+-            loss.backward()
++            # micro-batches of 48 with size-weighted losses: the same gradient as
++            # the full batch (GroupNorm only), within 16 GB
++            loss = 0.0
++            for zc, tc, vc in zip(z_t.split(48), t.split(48), target_velocity.split(48)):
++                lc = F.mse_loss(model(zc, tc), vc) * (zc.shape[0] / z_t.shape[0])
++                lc.backward()
++                loss += lc.detach()
+             
+             if (ii + 1) % accumulation_steps == 0:
+                 opt.step()
