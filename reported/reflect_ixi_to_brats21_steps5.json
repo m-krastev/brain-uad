@@ -1,0 +1,17 @@
+{
+ "ckpt": "results/reflect_ixi_run/REFLECT_BraTS_UNet_M_T2_256_kl_f8/000-UNet_M-T2/checkpoints/last.pt",
+ "data": "data/reflect_brats21_t2",
+ "steps": 5,
+ "reflect_max_dice": 0.7298174232080908,
+ "reflect_global_max_dice": 0.7960973547955338,
+ "reflect_n": 116,
+ "val_pooled_dice": 0.7781359112725974,
+ "threshold": 0.385,
+ "strict_pooled_dice": 0.7611723501705419,
+ "strict_mean_dice_tumour_slices": 0.6281356058171256,
+ "strict_auprc_pooled": 0.8275705532388101,
+ "strict_fp_rate_normal_slices": 0.2898936170212766,
+ "strict_n_slices": 2520,
+ "strict_n_tumour_slices": 2144,
+ "oracle_pooled_dice_test_all": 0.7621941632370901
+}

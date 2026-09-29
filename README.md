@@ -1,4 +1,4 @@
-# Unsupervised brain-tumour detection: REFLECT under a stricter protocol
+# Unsupervised brain-tumour detection: REFLECT across hospitals and protocols
 
 Unsupervised anomaly detection learns what healthy brains look like and flags
 what a model cannot map back to healthy anatomy. REFLECT (Beizaee et al.,
@@ -38,7 +38,25 @@ the brain.
   7.7% of tumour-free slices contain false-positive pixels (13.0% with one
   step), which the single-slice protocol never measures.
 
-IXI_PLACEHOLDER
+### Healthy data from other hospitals
+
+The same model trained on healthy IXI scans (7520 slices from three London
+hospitals, same number of updates) instead of tumour-free BraTS slices, and
+tested on the same BraTS subjects:
+
+| 5 correction steps | Healthy data: BraTS | Healthy data: IXI |
+|---|---|---|
+| REFLECT protocol, mean per-slice max Dice | 74.5 | 73.0 |
+| REFLECT protocol, pooled max Dice | 81.7 | 79.6 |
+| Strict, pooled Dice | 79.6 | 76.1 |
+| Strict, mean Dice over tumour slices | 64.1 | 62.8 |
+| Strict, pooled AUPRC | 0.865 | 0.828 |
+| Strict, tumour-free slices with false positives | 7.7% | 29.0% |
+
+Tumour segmentation transfers across sites: Dice falls by only 1–3 points.
+The cost of the site shift is false alarms, which nearly quadruple on
+tumour-free slices. REFLECT's single-slice protocol cannot show this, because
+every test slice contains a tumour.
 
 ## Setup
 
