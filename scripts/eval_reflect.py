@@ -11,6 +11,9 @@ smoothed image difference plus half the clipped, smoothed latent difference.
            threshold swept on the test slices themselves. Reports the mean
            per-slice Dice at the best common threshold ("max Dice") and the
            pooled Dice at the best threshold ("global max Dice").
+  --harmonise DIR matches each subject's brain intensity histogram to the
+  slices in DIR (e.g. the healthy training data) before inference.
+
   strict   all 20 central slices of every test subject, with and without
            tumour; the threshold maximising pooled Dice on the validation
            subjects' slices is applied to the test slices. Reports pooled Dice,
@@ -48,7 +51,7 @@ def load_model(ckpt: Path, dev):
     return model.to(dev).eval(), vae, cfg
 
 
-def slices(d: Path, modality: str):
+def slices(d: Path, modality: str, with_seg: bool = True):
     from PIL import Image, ImageOps
 
     out = []
@@ -57,7 +60,7 @@ def slices(d: Path, modality: str):
             im = Image.open(str(f).replace(f"-{modality}", suffix))
             return np.array(ImageOps.pad(im, (256, 256), color="#000").convert("L"))
         out.append((f.name.split("-slice_")[0], rd(f"-{modality}"), rd("-brainmask") > 0,
-                    rd("-segmentation") > 0))
+                    rd("-segmentation") > 0 if with_seg else None))
     return out
 
 
@@ -83,6 +86,31 @@ def anomaly_maps(model, vae, items, steps, dev, bs=32):
     return np.stack(maps)
 
 
+def reference_cdf(d: Path, modality: str):
+    """Cumulative histogram (256 levels) of brain pixels over a set of slices."""
+    h = np.zeros(256)
+    for _, img, brain, _ in slices(d, modality, with_seg=False):
+        h += np.bincount(img[brain], minlength=256)
+    return np.cumsum(h) / h.sum()
+
+
+def harmonise(items, ref_cdf):
+    """Histogram-match each subject's brain pixels (all its slices together) to
+    the reference distribution; the background stays 0."""
+    by_subject = {}
+    for i, it in enumerate(items):
+        by_subject.setdefault(it[0], []).append(i)
+    out = list(items)
+    for idx in by_subject.values():
+        h = sum(np.bincount(items[i][1][items[i][2]], minlength=256) for i in idx)
+        cdf = np.cumsum(h) / h.sum()
+        lut = np.searchsorted(ref_cdf, cdf).clip(0, 255).astype(np.uint8)
+        for i in idx:
+            name, img, brain, seg = items[i]
+            out[i] = (name, np.where(brain, lut[img], 0).astype(np.uint8), brain, seg)
+    return out
+
+
 def dice(p, g):
     s = p.sum() + g.sum()
     return 1.0 if s == 0 else 2 * (p & g).sum() / s
@@ -105,28 +133,32 @@ def main():
     p.add_argument("--data", required=True)
     p.add_argument("--steps", type=int, default=1)
     p.add_argument("--out", required=True)
+    p.add_argument("--harmonise", default=None,
+                   help="slice folder whose brain intensity distribution all inputs are matched to")
     a = p.parse_args()
     dev = torch.device("cuda")
     model, vae, cfg = load_model(Path(a.ckpt), dev)
     data, mod = Path(a.data), cfg["modality"]
     ths = np.linspace(0, 1, 201)
-    res = {"ckpt": a.ckpt, "data": a.data, "steps": a.steps}
+    res = {"ckpt": a.ckpt, "data": a.data, "steps": a.steps, "harmonise": a.harmonise}
+    ref = reference_cdf(Path(a.harmonise), mod) if a.harmonise else None
+    prep = (lambda items: harmonise(items, ref)) if a.harmonise else (lambda items: items)
 
-    test = slices(data / "test", mod)
+    test = prep(slices(data / "test", mod))
     tm = anomaly_maps(model, vae, test, a.steps, dev)
     ts = np.stack([it[3] for it in test])
     res["reflect_max_dice"], _ = sweep(tm, ts, ths, per_slice=True)
     res["reflect_global_max_dice"], _ = sweep(tm, ts, ths, per_slice=False)
     res["reflect_n"] = len(test)
 
-    val = slices(data / "val_all", mod)
+    val = prep(slices(data / "val_all", mod))
     vm = anomaly_maps(model, vae, val, a.steps, dev)
     vs = np.stack([it[3] for it in val])
     vb = np.stack([it[2] for it in val])
     res["val_pooled_dice"], th = sweep(vm * vb, vs, ths, per_slice=False)
     res["threshold"] = float(th)
 
-    tall = slices(data / "test_all", mod)
+    tall = prep(slices(data / "test_all", mod))
     am = anomaly_maps(model, vae, tall, a.steps, dev)
     ab = np.stack([it[2] for it in tall])
     am = am * ab  # score only inside the brain
@@ -143,7 +175,7 @@ def main():
     )
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    (out / f"eval_steps{a.steps}.json").write_text(json.dumps(res, indent=1))
+    (out / f"eval_steps{a.steps}{'_harmonised' if a.harmonise else ''}.json").write_text(json.dumps(res, indent=1))
     print(json.dumps(res, indent=1))
 
 

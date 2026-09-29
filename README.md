@@ -58,6 +58,13 @@ The cost of the site shift is false alarms, which nearly quadruple on
 tumour-free slices. REFLECT's single-slice protocol cannot show this, because
 every test slice contains a tumour.
 
+Matching each test subject's brain intensity histogram to the IXI training
+data before inference (`eval_reflect.py --harmonise`) does not help: false
+alarms rise to 33.5% and pooled Dice falls to 75.0. The site shift is not a
+difference in intensity distribution alone; contrast, texture or resolution
+(many BraTS T2 scans are thick-slice acquisitions resampled to 1 mm) remain
+candidates.
+
 ## Setup
 
 - **BraTS 2021** (1251 scans; T2 and whole-tumour masks), split 80/10/10 by
