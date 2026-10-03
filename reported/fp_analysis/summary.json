@@ -1,0 +1,59 @@
+{
+ "n_subjects": 126,
+ "slice_axis_counts": {
+  "0": 0,
+  "1": 31,
+  "2": 95
+ },
+ "ratio_quartiles": [
+  0.5161180413724846,
+  0.6334782807249463,
+  0.7966674531625791
+ ],
+ "brats": {
+  "threshold": 0.38,
+  "fp_slice_rate_normal": 0.07712765957446809,
+  "n_normal_slices": 376,
+  "n_subjects_with_normal_slices": 41,
+  "fp_border_fraction": 0.10881559189620908,
+  "fp_mean_intensity_normal": 0.4512781063234222,
+  "brain_mean_intensity_normal": 0.2670405733256533,
+  "spearman_sharpness_vs_subject_fp_rate": [
+   0.04930676177000395,
+   0.7594981223132488
+  ],
+  "fp_rate_by_sharpness_quartile": [
+   0.14214285714285715,
+   0.034999999999999996,
+   0.0,
+   0.11170255183413079
+  ],
+  "fp_rate_by_slice_axis": {
+   "1": 0.03953947368421053,
+   "2": 0.08402457757296468
+  }
+ },
+ "ixi": {
+  "threshold": 0.385,
+  "fp_slice_rate_normal": 0.2898936170212766,
+  "n_normal_slices": 376,
+  "n_subjects_with_normal_slices": 41,
+  "fp_border_fraction": 0.1034663208205984,
+  "fp_mean_intensity_normal": 0.44918507289888654,
+  "brain_mean_intensity_normal": 0.2670405733256533,
+  "spearman_sharpness_vs_subject_fp_rate": [
+   0.18665651854310078,
+   0.24259395542602064
+  ],
+  "fp_rate_by_sharpness_quartile": [
+   0.4621428571428572,
+   0.09666666666666666,
+   0.46380952380952384,
+   0.49525518341307817
+  ],
+  "fp_rate_by_slice_axis": {
+   "1": 0.4481140350877193,
+   "2": 0.36105990783410136
+  }
+ }
+}

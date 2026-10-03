@@ -1,0 +1,156 @@
+{
+ "brats": {
+  "n_val_normal_slices": 396,
+  "auprc_pooled": 0.8650910165075243,
+  "dice_optimal": {
+   "threshold": 0.38,
+   "pooled_dice": 0.7964615095217081,
+   "mean_dice_tumour_slices": 0.6408080659570043,
+   "fp_rate_normal_slices": 0.07712765957446809
+  },
+  "val_fp_5pct": {
+   "threshold": 0.37,
+   "pooled_dice": 0.7960388674917122,
+   "mean_dice_tumour_slices": 0.6431928794715878,
+   "fp_rate_normal_slices": 0.09840425531914894
+  },
+  "val_fp_10pct": {
+   "threshold": 0.3375,
+   "pooled_dice": 0.7915046983831067,
+   "mean_dice_tumour_slices": 0.647973041795125,
+   "fp_rate_normal_slices": 0.1675531914893617
+  }
+ },
+ "ixi": {
+  "n_val_normal_slices": 396,
+  "auprc_pooled": 0.8275705532388101,
+  "dice_optimal": {
+   "threshold": 0.385,
+   "pooled_dice": 0.7611723501705419,
+   "mean_dice_tumour_slices": 0.6281356058171256,
+   "fp_rate_normal_slices": 0.2898936170212766
+  },
+  "val_fp_5pct": {
+   "threshold": 0.5650000000000001,
+   "pooled_dice": 0.7199571476116423,
+   "mean_dice_tumour_slices": 0.5431170991952947,
+   "fp_rate_normal_slices": 0.07446808510638298
+  },
+  "val_fp_10pct": {
+   "threshold": 0.43,
+   "pooled_dice": 0.7611573248007929,
+   "mean_dice_tumour_slices": 0.6136499828507253,
+   "fp_rate_normal_slices": 0.23138297872340424
+  }
+ },
+ "ixi_thick": {
+  "n_val_normal_slices": 396,
+  "auprc_pooled": 0.8617626951805855,
+  "dice_optimal": {
+   "threshold": 0.47500000000000003,
+   "pooled_dice": 0.777085791894402,
+   "mean_dice_tumour_slices": 0.6410806624581759,
+   "fp_rate_normal_slices": 0.4228723404255319
+  },
+  "val_fp_5pct": {
+   "threshold": 0.73,
+   "pooled_dice": 0.6441147000036722,
+   "mean_dice_tumour_slices": 0.457996873422916,
+   "fp_rate_normal_slices": 0.08244680851063829
+  },
+  "val_fp_10pct": {
+   "threshold": 0.655,
+   "pooled_dice": 0.7112599172016404,
+   "mean_dice_tumour_slices": 0.5305212863088858,
+   "fp_rate_normal_slices": 0.14627659574468085
+  }
+ },
+ "ft_mix0": {
+  "n_val_normal_slices": 396,
+  "auprc_pooled": 0.8284153858953656,
+  "dice_optimal": {
+   "threshold": 0.39,
+   "pooled_dice": 0.7584261971487941,
+   "mean_dice_tumour_slices": 0.6270254692188629,
+   "fp_rate_normal_slices": 0.31117021276595747
+  },
+  "val_fp_5pct": {
+   "threshold": 0.4975,
+   "pooled_dice": 0.7467071305359391,
+   "mean_dice_tumour_slices": 0.5864478521767442,
+   "fp_rate_normal_slices": 0.1702127659574468
+  },
+  "val_fp_10pct": {
+   "threshold": 0.425,
+   "pooled_dice": 0.7596976817427596,
+   "mean_dice_tumour_slices": 0.617974356702146,
+   "fp_rate_normal_slices": 0.24202127659574468
+  }
+ },
+ "ft_mix5": {
+  "n_val_normal_slices": 396,
+  "auprc_pooled": 0.8288435261466748,
+  "dice_optimal": {
+   "threshold": 0.365,
+   "pooled_dice": 0.76367701518755,
+   "mean_dice_tumour_slices": 0.6264489357085283,
+   "fp_rate_normal_slices": 0.2765957446808511
+  },
+  "val_fp_5pct": {
+   "threshold": 0.53,
+   "pooled_dice": 0.7231270221828491,
+   "mean_dice_tumour_slices": 0.5463694165419035,
+   "fp_rate_normal_slices": 0.08776595744680851
+  },
+  "val_fp_10pct": {
+   "threshold": 0.4025,
+   "pooled_dice": 0.7627846182313611,
+   "mean_dice_tumour_slices": 0.6142801446377075,
+   "fp_rate_normal_slices": 0.22340425531914893
+  }
+ },
+ "ft_mix20": {
+  "n_val_normal_slices": 396,
+  "auprc_pooled": 0.832841377128479,
+  "dice_optimal": {
+   "threshold": 0.34,
+   "pooled_dice": 0.7691461612915169,
+   "mean_dice_tumour_slices": 0.6259684772060928,
+   "fp_rate_normal_slices": 0.23670212765957446
+  },
+  "val_fp_5pct": {
+   "threshold": 0.405,
+   "pooled_dice": 0.7642527945619515,
+   "mean_dice_tumour_slices": 0.6011432278608623,
+   "fp_rate_normal_slices": 0.12234042553191489
+  },
+  "val_fp_10pct": {
+   "threshold": 0.355,
+   "pooled_dice": 0.7697335274957284,
+   "mean_dice_tumour_slices": 0.6216044348360635,
+   "fp_rate_normal_slices": 0.2074468085106383
+  }
+ },
+ "ft_mix50": {
+  "n_val_normal_slices": 396,
+  "auprc_pooled": 0.8337872275095844,
+  "dice_optimal": {
+   "threshold": 0.34500000000000003,
+   "pooled_dice": 0.7676357047398931,
+   "mean_dice_tumour_slices": 0.6280472539121115,
+   "fp_rate_normal_slices": 0.22872340425531915
+  },
+  "val_fp_5pct": {
+   "threshold": 0.41500000000000004,
+   "pooled_dice": 0.7624420075414631,
+   "mean_dice_tumour_slices": 0.6019667799063468,
+   "fp_rate_normal_slices": 0.09574468085106383
+  },
+  "val_fp_10pct": {
+   "threshold": 0.3525,
+   "pooled_dice": 0.7681729561850524,
+   "mean_dice_tumour_slices": 0.6261185744337036,
+   "fp_rate_normal_slices": 0.2047872340425532
+  }
+ }
+}

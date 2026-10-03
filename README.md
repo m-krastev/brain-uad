@@ -65,6 +65,51 @@ difference in intensity distribution alone; contrast, texture or resolution
 (many BraTS T2 scans are thick-slice acquisitions resampled to 1 mm) remain
 candidates.
 
+### The real cost of the shift: matched false-alarm rates
+
+Each model's Dice-optimal threshold sits at a different false-alarm rate, so
+the table above understates the shift. `scripts/operating_points.py` also fixes
+thresholds on the validation subjects so that at most 5% of their tumour-free
+slices fire, and applies them to the test subjects (single training seed;
+376 tumour-free test slices from 41 subjects):
+
+| Healthy training data | AUPRC | Dice, Dice-optimal (FP) | Dice / mean Dice at ≤5% val FP (test FP) |
+|---|---|---|---|
+| BraTS (in-domain) | 0.865 | 79.6 (7.7%) | 79.6 / 64.3 (9.8%) |
+| IXI | 0.828 | 76.1 (29.0%) | 72.0 / 54.3 (7.4%) |
+| IXI, thick-slice augmentation | 0.862 | 77.7 (42.3%) | 64.4 / 45.8 (8.2%) |
+| IXI, + 10 epochs on IXI only (control) | 0.828 | 75.8 (31.1%) | 74.7 / 58.6 (17.0%) |
+| IXI, + 10 epochs with 5 local subjects | 0.829 | 76.4 (27.7%) | 72.3 / 54.6 (8.8%) |
+| IXI, + 10 epochs with 20 local subjects | 0.833 | 76.9 (23.7%) | 76.4 / 60.1 (12.2%) |
+| IXI, + 10 epochs with 50 local subjects | 0.834 | 76.8 (22.9%) | 76.2 / 60.2 (9.6%) |
+
+- At a false-alarm rate near the in-domain one, training on IXI costs about
+  8 points of pooled Dice and 10 points of mean per-slice Dice, not 1–3.
+- Fine-tuning on the tumour-free slices of a few dozen local subjects
+  (`scripts/make_mix.py`, oversampled ×10, lr 5e-5, about 30 minutes) recovers
+  roughly half of that gap at a similar false-alarm rate.
+- Simulated thick-slice acquisitions (`export_reflect_ixi.py --thick 1,...,6`:
+  slab averaging along a random axis, resampled to 1 mm) raise AUPRC almost to
+  the in-domain value but make the model flag more healthy tissue, so it is
+  worst at a matched false-alarm rate.
+- Validation false-alarm rates transfer only roughly to the test subjects
+  (e.g. 5% on validation gives 7–17% on test).
+
+### Where the false alarms are
+
+`scripts/fp_analysis.py` and `scripts/fp_figure.py`
+(`reported/fp_analysis/`). The IXI model's false alarms are bright regions
+(mean intensity 0.45 against 0.27 for the brain) and only about 10% lie near
+the brain border. They are not explained by through-plane resolution
+(Spearman ρ = 0.19, p = 0.24 against a per-subject sharpness proxy), by
+distance to the tumour (21.5% of slices fire even in subjects whose 20 central
+slices contain no tumour), or by ventricle size. Visually they cover
+ventricles enlarged or displaced by mass effect, low frontal slices and
+distorted anatomy, which the model trained on tumour-free slices of the BraTS
+patients reconstructs without complaint. The in-domain result therefore
+benefits from the patients' own anatomy appearing in its "healthy" training
+data, and the local slices used for fine-tuning carry the same advantage.
+
 ## Setup
 
 - **BraTS 2021** (1251 scans; T2 and whole-tumour masks), split 80/10/10 by
