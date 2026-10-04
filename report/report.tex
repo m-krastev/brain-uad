@@ -1,0 +1,83 @@
+\documentclass[10pt]{article}
+\usepackage[a4paper,margin=2.3cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{caption}
+\captionsetup{font=small,labelfont=bf}
+\graphicspath{{../figures/}{../reported/fp_analysis/}}
+\input{numbers}
+
+\title{Healthy from where?\\[2pt]\large Evaluating a rectified-flow brain anomaly detector across protocols and hospitals}
+\author{Matey Krastev\\\small Independent researcher \quad \texttt{matey.krastev@outlook.com}\\
+\small Code and results: \url{https://github.com/m-krastev/brain-uad}}
+\date{Technical report, October 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Unsupervised anomaly detection (UAD) models for brain MRI learn what healthy anatomy looks like and flag what they cannot map back to it.
+REFLECT (MICCAI 2025) does this with a rectified flow in the latent space of a medical VAE and reports state-of-the-art tumour segmentation on BraTS.
+We reproduce REFLECT on BraTS 2021 T2 (pooled Dice \BratsReflectPooled{} against \PaperDice{} reported) and then evaluate it the way a deployed detector would be used: on all central slices of each test subject, including tumour-free ones, with the threshold fixed on validation subjects.
+Under this protocol the mean Dice per tumour slice is \BratsStrictMean{}, and \BratsFA{}\% of tumour-free slices contain false positives, a quantity the original single-slice protocol cannot measure.
+We then replace REFLECT's in-domain ``healthy'' training data, tumour-free slices of the BraTS patients themselves, with healthy volunteers scanned at other hospitals (IXI).
+At each model's Dice-optimal threshold the cost looks small (\IxiDiceOptDrop{} points of pooled Dice), but false alarms rise from \BratsFA{}\% to \IxiFA{}\%; compared at a matched false-alarm budget the cost is \IxiMatchedDrop{} points of pooled Dice.
+We test three remedies. Intensity harmonisation does not help. Simulated thick-slice acquisitions raise AUPRC from \IxiAUPRC{} to \ThickAUPRC{} (in-domain: \BratsAUPRC{}) but lower Dice at a fixed false-alarm budget, showing that threshold-free metrics can rank models in the wrong order. Fine-tuning on tumour-free slices from 20--50 local subjects lowers false alarms and recovers 35--42\% of the Dice gap at a matched false-alarm rate, while the same extra training without local data does not.
+All comparisons come with paired subject-level bootstrap intervals, and the code, patches and per-slice results are public.
+\end{abstract}
+
+\section{Introduction}
+Reconstruction-based UAD trains a generative model on healthy scans and scores each pixel by how much the model has to change it to make the scan look healthy \citep{baur2021autoencoders,lagogiannis2024deepdive}.
+Diffusion models improved these reconstructions \citep{wyatt2022anoddpm,pinaya2022fast,behrendt2023pddpm}; REFLECT \citep{beizaee2025reflect} replaces iterative denoising with a rectified flow \citep{liu2023rectified} in the latent space of a VAE \citep{rombach2022ldm}, trained to transport synthetically corrupted slices back to their clean versions in a near-straight line, so that a single integration step yields the healthy counterpart.
+
+Two parts of the standard evaluation make these results hard to carry over to a clinic.
+First, the benchmark protocol scores one slice per test subject, the one with the largest tumour, and chooses the binarisation threshold on the test slices.
+Tumour-free tissue in other slices never enters the score, so false alarms are invisible.
+Second, the ``healthy'' training slices are tumour-free slices of the BraTS patients themselves: the same scanners, the same preprocessing, and the anatomy of tumour patients.
+A hospital deploying UAD would instead train on healthy scans from elsewhere.
+Both concerns have been raised for UAD in general \citep{meissen2022pitfalls,bercea2023aes,lagogiannis2024deepdive,reinke2024pitfalls}; here we quantify them for a current state-of-the-art method.
+
+\paragraph{Contributions.}
+(i) An independent reproduction of REFLECT on BraTS 2021 T2 from the authors' code, with the changes needed to run it on a single 16\,GB GPU.
+(ii) A strict protocol (all 20 central slices, validation-fixed thresholds, a false-alarm rate on tumour-free slices) and a comparison at matched false-alarm budgets.
+(iii) A cross-site experiment training on IXI healthy volunteers, an analysis of where the resulting false alarms occur, and three remedies: intensity harmonisation, thick-slice augmentation and local fine-tuning.
+(iv) Paired subject-level bootstrap intervals for every comparison, and per-slice results from which all tables and figures can be recomputed on a CPU.
+
+\section{Method and setup}
+\paragraph{REFLECT.}
+A frozen KL-f8 VAE pretrained on medical images encodes each $256\times256$ slice to a $4\times32\times32$ latent $z$.
+A U-Net $v_\theta(z,t)$ is trained on healthy slices corrupted with synthetic anomalies to predict the straight-line velocity from the corrupted latent to the clean one.
+At test time the latent is integrated for $K$ Euler steps ($K=5$ unless noted), decoded to a healthy reconstruction, and the anomaly map is the mean of the smoothed, clipped image-space and latent-space differences, exactly as in the released evaluation code.
+We use the authors' code (commit \texttt{6e05909}) with a patch that loads the pickled VAE under PyTorch $\ge$\,2.6, encodes in chunks and splits each batch of 96 into micro-batches of 48 with size-weighted losses (identical gradients, as the U-Net uses GroupNorm only), and fixes the released test loader.
+Training follows the paper: UNet-M, 200 epochs, batch 96, learning rate $5\times10^{-4}$.
+
+\paragraph{Data.}
+BraTS 2021 \citep{baid2021brats,menze2015brats,bakas2017tcga}: 1251 T2 scans with whole-tumour masks, split 80/10/10 by subject (seed 0).
+From each scan we take the 20 central axial slices in SRI24 space \citep{rohlfing2010sri24}, map the brain's 1st--99th intensity percentiles to 0--255 and pad to 256.
+Training and validation use tumour-free slices only.
+IXI \citep{ixi}: 578 T2 scans of healthy volunteers from three London hospitals, skull-stripped with HD-BET \citep{isensee2019hdbet}, affinely registered to SRI24 with ANTs \citep{avants2011ants}, and sliced and scaled identically (7520 training slices).
+IXI-trained models are trained for the same number of updates as the in-domain model.
+
+\paragraph{Protocols.}
+\emph{REFLECT protocol}: one slice per test subject (the largest tumour; 116 subjects), threshold swept on these test slices; we report the pooled Dice at the best threshold and the mean per-slice Dice at the best common threshold.
+\emph{Strict protocol}: all 20 central slices of each of the 126 test subjects (2520 slices, 2144 with tumour, 376 tumour-free from 41 subjects), anomaly maps restricted to the brain mask, thresholds chosen on the validation subjects only.
+We report pooled Dice, mean Dice over tumour slices, pixel-level AUPRC inside the brain, and the \emph{false-alarm rate}: the fraction of tumour-free slices with any positive pixel.
+Thresholds are either Dice-optimal on validation, or the lowest threshold at which at most 5\% (or 10\%) of tumour-free validation slices fire.
+Confidence intervals are 95\% percentile intervals from 2000 bootstrap resamples of test subjects \citep{efron1986bootstrap}, keeping all slices of a subject together and the validation thresholds fixed; differences between models use paired resamples.
+
+\section{Results}
+\input{results}
+
+\section{Discussion}
+\input{discussion}
+
+\bibliographystyle{abbrvnat}
+\bibliography{refs}
+\end{document}

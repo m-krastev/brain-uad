@@ -1,0 +1,16 @@
+REFLECT reproduces, and on its own benchmark it is as good as reported.
+What changes under a deployment-like evaluation is the false-alarm rate on healthy tissue, which the single-slice protocol cannot measure and which Dice-optimal comparisons hide.
+Two practical recommendations follow.
+First, UAD methods should report a false-alarm rate on tumour-free slices and compare models at matched false-alarm budgets, or report the full Dice--false-alarm curve; AUPRC and best-threshold Dice can rank models in the wrong order (thick-slice augmentation here).
+Second, the usual in-domain training set, tumour-free slices of the patients themselves, is not ``healthy'' in the sense a deployment would need: it carries the patients' anatomy, including mass effect, into training.
+Training on healthy volunteers from other hospitals exposes this, and a small amount of local data recovers part of the gap.
+
+\paragraph{Limitations.}
+We study one modality (T2), one dataset pair and 2D slices.
+The tumour-free test set is small (376 slices from 41 subjects), so false-alarm rates have wide intervals and the correlation analyses are underpowered.
+Bootstrap intervals cover the sampling of test subjects, not training randomness; repeated training seeds are reported in the repository as they complete.
+No healthy scans from the BraTS sites exist, so our ``local'' fine-tuning data are tumour-free slices of other patients and inherit the anatomy leakage described above; a cleaner test would use a dataset with healthy controls and patients from the same scanners.
+
+\paragraph{Reproducibility.}
+All code, the patch to the authors' code, data splits, per-model JSON results and the per-slice threshold curves behind every table and figure are in the repository.
+The evaluation of a model takes about four minutes on one 16\,GB GPU; everything after that (thresholds, intervals, figures) runs on a CPU in seconds.
