@@ -59,33 +59,37 @@ def tradeoff(summary, curves_dir, out, names):
 
 
 def local_finetuning(summary, out):
-    """Paired bootstrap differences from the IXI model: the shared subject
-    variance cancels, so these intervals are much tighter than per-model ones."""
+    """Paired bootstrap differences from the IXI model of the same training
+    seed: the shared subject variance cancels, so these intervals are much
+    tighter than per-model ones. One line per training seed."""
     m, dif = summary["models"], summary["paired_differences"]
     ns = [0, 5, 20, 50]
-    keys = [f"ft_mix{n}" for n in ns]
-    if not all(k in m for k in keys) or "brats - ixi" not in dif:
-        return
+    seeds = [(10, "ixi", "ft_mix{}"), (11, "ixi_s11", "ft_s11_mix{}")]
+    seeds = [x for x in seeds if x[1] in m]
     panels = (("dice_opt/fp_rate", "dice_opt", "fp_rate", "False alarms at the Dice-optimal\nvalidation threshold, change from IXI (pp)"),
               ("test_fp10/pooled_dice", ("at_test_fp", "10pct"), "pooled_dice",
                "Pooled Dice at 10% test false alarms,\nchange from IXI (pp)"))
     fig, axes = plt.subplots(1, 2, figsize=(7.4, 3.0))
+    shades = {10: COLOR["ft_mix50"], 11: COLOR["ft_mix20"]}
     for ax, (dk, rule, k, title) in zip(axes, panels):
         get = (lambda x: m[x][rule][k]) if isinstance(rule, str) else (lambda x: m[x][rule[0]][rule[1]][k])
-        y = np.array([get(x) - get("ixi") for x in keys]) * 100
-        lo = np.array([dif[f"{x} - ixi"][dk]["ci"][0] for x in keys]) * 100
-        hi = np.array([dif[f"{x} - ixi"][dk]["ci"][1] for x in keys]) * 100
-        ax.errorbar(range(4), y, yerr=[y - lo, hi - y], fmt="o-", color=COLOR["ft_mix50"], capsize=3, lw=1.4,
-                    label="IXI model fine-tuned 10 more epochs")
-        ax.axhline(0, color=COLOR["ixi"], ls=":", lw=1, label="IXI model")
-        ax.axhline((get("brats") - get("ixi")) * 100, color=COLOR["brats"], ls="--", lw=1, label="BraTS healthy slices (in-domain)")
+        for i, (sd, base, pat) in enumerate(seeds):
+            xs = [j for j, n in enumerate(ns) if pat.format(n) in m]
+            keys = [pat.format(ns[j]) for j in xs]
+            y = np.array([get(x) - get(base) for x in keys]) * 100
+            lo = np.array([dif[f"{x} - {base}"][dk]["ci"][0] for x in keys]) * 100
+            hi = np.array([dif[f"{x} - {base}"][dk]["ci"][1] for x in keys]) * 100
+            off = (i - (len(seeds) - 1) / 2) * 0.12
+            ax.errorbar(np.array(xs) + off, y, yerr=[y - lo, hi - y], fmt="o-", color=shades[sd], capsize=3, lw=1.4,
+                        label=f"IXI model (training seed {sd}) fine-tuned 10 more epochs")
+        ax.axhline(0, color=COLOR["ixi"], ls=":", lw=1, label="IXI model (same seed)")
         ax.set_xticks(range(4), [str(n) for n in ns])
         ax.set_xlabel("Local (BraTS) subjects in the fine-tuning data")
         ax.set_title(title, fontsize=8.5)
         ax.grid(alpha=0.25, lw=0.5)
     h, l = axes[0].get_legend_handles_labels()
-    fig.legend(h, l, loc="lower center", ncol=3, frameon=False, fontsize=7.5, bbox_to_anchor=(0.5, -0.13))
-    fig.text(0.5, -0.19, "Points: test-set difference; bars: 95% paired bootstrap interval over test subjects. "
+    fig.legend(h, l, loc="lower center", ncol=2, frameon=False, fontsize=7.5, bbox_to_anchor=(0.5, -0.17))
+    fig.text(0.5, -0.22, "Points: test-set difference; bars: 95% paired bootstrap interval over test subjects. "
              "0 local subjects = the same extra training on IXI only.", ha="center", fontsize=7)
     save(fig, out, "local_finetuning")
 

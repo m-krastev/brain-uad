@@ -28,8 +28,8 @@ REFLECT (MICCAI 2025) does this with a rectified flow in the latent space of a m
 We reproduce REFLECT on BraTS 2021 T2 (pooled Dice \BratsReflectPooled{} against \PaperDice{} reported) and then evaluate it the way a deployed detector would be used: on all central slices of each test subject, including tumour-free ones, with the threshold fixed on validation subjects.
 Under this protocol the mean Dice per tumour slice is \BratsStrictMean{}, and \BratsFA{}\% of tumour-free slices contain false positives, a quantity the original single-slice protocol cannot measure.
 We then replace REFLECT's in-domain ``healthy'' training data, tumour-free slices of the BraTS patients themselves, with healthy volunteers scanned at other hospitals (IXI).
-At each model's Dice-optimal threshold the cost looks small (\IxiDiceOptDrop{} points of pooled Dice), but false alarms rise from \BratsFA{}\% to \IxiFA{}\%; compared at a matched false-alarm budget the cost is \IxiMatchedDrop{} points of pooled Dice.
-We test three remedies. Intensity harmonisation does not help. Simulated thick-slice acquisitions raise AUPRC from \IxiAUPRC{} to \ThickAUPRC{} (in-domain: \BratsAUPRC{}) but lower Dice at a fixed false-alarm budget, showing that threshold-free metrics can rank models in the wrong order. Fine-tuning on tumour-free slices from 20--50 local subjects lowers false alarms and recovers 35--42\% of the Dice gap at a matched false-alarm rate, while the same extra training without local data does not.
+At each model's Dice-optimal threshold the cost looks small (\IxiDiceOptDrop{} points of pooled Dice), but false alarms rise from \BratsFA{}\% to \IxiFA{}\%; compared at a matched false-alarm budget the cost is \IxiMatchedDrop{} points of pooled Dice (first training seed; a second seed shows 38.8\% false alarms and a 10.5-point gap).
+We test three remedies. Intensity harmonisation does not help. Simulated thick-slice acquisitions raise AUPRC from \IxiAUPRC{} to \ThickAUPRC{} for one training seed, but a second seed of plain IXI training reaches 0.879 (in-domain: \BratsAUPRC{}), so the gain is within seed variation; across these models a higher AUPRC went with more false alarms. Fine-tuning on tumour-free slices from 20--50 local subjects lowers false alarms and raises Dice at a matched false-alarm rate for both training seeds, while the same extra training without local data does not.
 All comparisons come with paired subject-level bootstrap intervals, and the code, patches and per-slice results are public.
 \end{abstract}
 
@@ -48,7 +48,7 @@ Both concerns have been raised for UAD in general \citep{meissen2022pitfalls,ber
 (i) An independent reproduction of REFLECT on BraTS 2021 T2 from the authors' code, with the changes needed to run it on a single 16\,GB GPU.
 (ii) A strict protocol (all 20 central slices, validation-fixed thresholds, a false-alarm rate on tumour-free slices) and a comparison at matched false-alarm budgets.
 (iii) A cross-site experiment training on IXI healthy volunteers, an analysis of where the resulting false alarms occur, and three remedies: intensity harmonisation, thick-slice augmentation and local fine-tuning.
-(iv) Paired subject-level bootstrap intervals for every comparison, and per-slice results from which all tables and figures can be recomputed on a CPU.
+(iv) Paired subject-level bootstrap intervals for every comparison, repeated training seeds, and per-slice results from which all tables and figures can be recomputed on a CPU.
 
 \section{Method and setup}
 \paragraph{REFLECT.}

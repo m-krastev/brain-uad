@@ -25,6 +25,7 @@ the validation thresholds held fixed.
 """
 import argparse
 import json
+import re
 from pathlib import Path
 
 import numpy as np
@@ -98,6 +99,17 @@ def auprc(s, w):
     return (drec * prec[..., :-1]).sum(-1) + rec[..., -1] * prec[..., -1]
 
 
+def seed(name):
+    """Training seed from a model name: ixi_s11, ft_s11_mix20 -> 11; else 10
+    (REFLECT's default --global-seed)."""
+    m = re.search(r"(?:^|_)s(\d+)(?:_|$)", name)
+    return int(m.group(1)) if m else 10
+
+
+def family(name):
+    return re.sub(r"_s\d+(?=_|$)", "", name)
+
+
 def ci(x):
     return [float(np.percentile(x, 2.5)), float(np.percentile(x, 97.5))]
 
@@ -159,15 +171,35 @@ def main():
         res[n] = r
         np.savez_compressed(out / f"curve_{n}.npz", thresholds=d["thresholds"], **full)
 
-    # paired differences (same resampled subjects for both models)
-    pairs = [(x, y) for y in ("brats", "ixi") if y in names for x in names if x != y]
+    # paired differences (same resampled subjects for both models), against
+    # the IXI and in-domain models of the same training seed (falling back to
+    # the first seed's in-domain model while a replicate is missing)
+    by = {(family(n), seed(n)): n for n in names}
+    pairs = []
+    for x in names:
+        for fam in ("brats", "ixi"):
+            y = by.get((fam, seed(x)), by.get((fam, 10)))
+            if y is not None and y != x:
+                pairs.append((x, y))
     diffs = {}
     for x, y in pairs:
         diffs[f"{x} - {y}"] = {}
         for k in boot[x]:
             dlt = boot[x][k] - boot[y][k]
             diffs[f"{x} - {y}"][k] = {"ci": ci(dlt), "p_le_0": float((dlt <= 0).mean())}
-    (out / "summary.json").write_text(json.dumps({"models": res, "paired_differences": diffs}, indent=1))
+    # training-seed replicates: the same metrics for each seed of a model
+    seeds = {}
+    for n in names:
+        r = res[n]
+        seeds.setdefault(family(n), {})[seed(n)] = {
+            "auprc": r["auprc"],
+            "dice_opt/pooled_dice": r["dice_opt"]["pooled_dice"],
+            "dice_opt/fp_rate": r["dice_opt"]["fp_rate"],
+            "val_fp5/pooled_dice": r["val_fp5"]["pooled_dice"],
+            "val_fp5/fp_rate": r["val_fp5"]["fp_rate"],
+            "test_fp10/pooled_dice": r["at_test_fp"]["10pct"]["pooled_dice"],
+            "test_fp10/mean_dice": r["at_test_fp"]["10pct"]["mean_dice"]}
+    (out / "summary.json").write_text(json.dumps({"models": res, "paired_differences": diffs, "seeds": seeds}, indent=1))
 
     # markdown table
     lines = ["| Model | AUPRC | Dice-optimal: pooled Dice / FA | ≤5% val FA: pooled Dice / mean Dice / test FA "

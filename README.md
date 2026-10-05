@@ -29,24 +29,30 @@ All intervals are 95% bootstrap intervals over the 126 test subjects
    per subject with a validation-chosen threshold, the same model has a mean
    Dice of 64.1 per tumour slice, and 7.7% of tumour-free slices contain false
    positives. The single-slice protocol has no tumour-free slices to measure.
-3. Healthy scans from other hospitals mostly cost false alarms. Training
-   on IXI (healthy volunteers, three London hospitals) instead of tumour-free
-   BraTS slices lowers pooled Dice by only 3.5 points [2.1, 5.0] at each
-   model's Dice-optimal threshold, but raises the false-alarm rate from 7.7%
-   to 29.0% (difference 21.3 points [9.3, 35.3]). At an equal 10% false-alarm
-   rate the Dice gap is 5.7 points [2.7, 12.3].
-4. A few dozen local scans close part of the gap; extra training alone does
-   not. Ten epochs of fine-tuning with tumour-free slices from 20 or 50 local
-   subjects lower false alarms by 5.3 [0.7, 10.1] and 6.1 [1.6, 10.9] points
-   and raise Dice at a 10% false-alarm rate by 2.0 [0.6, 7.7] and 2.4
-   [0.6, 7.9] points. The same ten epochs on IXI alone change neither
-   (intervals include zero).
-5. AUPRC can reward the wrong model. Simulated thick-slice acquisitions
-   raise AUPRC from 0.828 to 0.862 (+3.4 points [1.5, 5.5]), almost the
-   in-domain 0.865, but the model also flags more healthy tissue (42.3% false
-   alarms at its Dice-optimal threshold). At a threshold fixed for 5% validation false alarms its pooled Dice
-   is 64.4 against 72.0 for plain IXI training (−7.6 [−9.2, −6.0]), at similar
-   test false-alarm rates (8.2% and 7.4%).
+3. Healthy scans from other hospitals mostly cost false alarms. With IXI
+   (healthy volunteers, three London hospitals) instead of tumour-free BraTS
+   slices as training data, 29.0% and 38.8% of tumour-free test slices contain
+   false positives at the Dice-optimal threshold (two training seeds), against
+   7.7% in-domain (differences 21.3 [9.3, 35.3] and 31.1 [17.7, 45.8] points).
+   At an equal 10% false-alarm rate pooled Dice is 73.9 and 69.1 against 79.6.
+   Dice-optimal Dice (76.1, 79.1) and AUPRC (0.828, 0.879 against 0.865) hide
+   this; one IXI seed even has a higher AUPRC than the in-domain model.
+4. A few dozen local scans close much of the gap; extra training alone does
+   not. Ten
+   epochs of fine-tuning with tumour-free slices from 20 local subjects lower
+   false alarms by 5.3 [0.7, 10.1] (seed 10) and 18.9 [10.0, 29.7] points
+   (seed 11), and with 50 local subjects by 6.1 [1.6, 10.9] and 27.1
+   [16.3, 40.0] points. Pooled Dice at a 10% false-alarm rate rises by 2.0–2.4
+   (seed 10) and 9.7–13.6 points (seed 11). The same ten epochs on IXI alone
+   help on neither seed.
+5. The training seed moves results as much as some interventions. The two IXI
+   models differ only in their training seed, yet their AUPRC differs by 5
+   points and their false-alarm rate by 10. Thick-slice augmentation (seed 10)
+   raised AUPRC from 0.828 to 0.862, but plain IXI training with seed 11
+   reaches 0.879, so that gain is within seed variation; its replicate is
+   running. Among the IXI models trained without local data, a higher AUPRC
+   went with more false alarms and lower Dice at a fixed false-alarm rate, so
+   AUPRC alone can rank these models in the wrong order.
 
 ## Results
 
@@ -85,7 +91,9 @@ slices, anomaly maps restricted to the brain.
 The same model trained on 7520 healthy IXI slices for the same number of
 updates, tested on the same BraTS subjects. Point estimates with 95% bootstrap
 intervals; "FA" is the fraction of tumour-free test slices with any positive
-pixel.
+pixel. Rows marked "seed 11" repeat the training with a different random seed
+(REFLECT's default is 10); the replicates of the thick-slice and in-domain
+models are still training.
 
 | Healthy training data | AUPRC | Dice-optimal threshold: pooled Dice / FA | At 10% test FA: pooled / mean Dice |
 |---|---|---|---|
@@ -96,6 +104,10 @@ pixel.
 | IXI, + 10 epochs with 5 local subjects | 0.829 [0.779, 0.865] | 76.4 [73.0, 79.1] / 27.7 [16.5, 41.8] | 73.0 [66.8, 77.3] / 55.6 [48.5, 61.7] |
 | IXI, + 10 epochs with 20 local subjects | 0.833 [0.786, 0.868] | 76.9 [73.8, 79.5] / 23.7 [14.0, 35.8] | 75.9 [71.9, 79.3] / 59.0 [54.0, 64.4] |
 | IXI, + 10 epochs with 50 local subjects | 0.834 [0.789, 0.868] | 76.8 [73.8, 79.3] / 22.9 [13.1, 35.0] | 76.3 [72.3, 79.3] / 60.4 [54.8, 65.2] |
+| IXI, seed 11 | 0.879 [0.852, 0.900] | 79.1 [76.4, 81.3] / 38.8 [25.0, 54.0] | 69.1 [54.2, 77.5] / 51.1 [36.3, 62.1] |
+| IXI, seed 11, + 10 epochs on IXI only (control) | 0.863 [0.833, 0.887] | 77.3 [74.5, 79.8] / 46.5 [31.9, 62.6] | 63.6 [46.1, 72.5] / 45.5 [29.5, 55.8] |
+| IXI, seed 11, + 10 epochs with 20 local subjects | 0.898 [0.876, 0.915] | 81.5 [79.3, 83.3] / 19.9 [10.2, 33.1] | 78.8 [66.7, 83.0] / 62.0 [47.9, 70.4] |
+| IXI, seed 11, + 10 epochs with 50 local subjects | 0.908 [0.889, 0.922] | 82.7 [80.9, 84.2] / 11.7 [4.9, 20.5] | 82.7 [78.9, 84.1] / 68.6 [61.5, 72.7] |
 
 The intervals of single models overlap because every model sees the same hard
 subjects; the paired differences in the findings above and in
@@ -106,7 +118,8 @@ false-alarm rates regardless of how well their validation thresholds transfer.
 
 ![Dice against false-alarm rate over all thresholds](figures/tradeoff.png)
 
-At each model's Dice-optimal threshold (crosses) the curves look close; the
+Curves for the first training seed. At each model's Dice-optimal threshold
+(crosses) the curves look close; the
 models separate at the low false-alarm rates a screening tool would run at.
 Validation thresholds (dots) transfer only roughly: aiming for 5% false alarms
 on validation gives 7–17% on test.
@@ -119,18 +132,23 @@ on validation gives 7–17% on test.
   distribution alone.
 - Thick-slice augmentation (`export_reflect_ixi.py --thick 1,...,6`: slab
   averaging along a random axis, resampled to 1 mm, since many BraTS T2 scans
-  are thick-slice acquisitions): raises AUPRC and Dice-optimal Dice (76.1 to
-  77.7), but lowers Dice at a fixed validation false-alarm budget (finding 5).
+  are thick-slice acquisitions): with seed 10 it raises AUPRC (0.828 to
+  0.862) and Dice-optimal Dice (76.1 to 77.7) but lowers Dice at a fixed
+  validation false-alarm budget (72.0 to 64.4). A second plain-IXI seed shows
+  the same pattern without augmentation (0.879, 79.1, 64.5), so the effect
+  cannot be attributed to the augmentation until its own replicate is in.
 - Local fine-tuning (`scripts/make_mix.py`): IXI plus the tumour-free
   slices of N randomly chosen BraTS training subjects, oversampled ×10,
   10 epochs at lr 5e-5 (about 30 minutes).
 
 ![Effect of local fine-tuning, paired differences from the IXI model](figures/local_finetuning.png)
 
-With 20 or 50 local subjects the model recovers 35–42% of the Dice gap
-to the in-domain model at a 10% false-alarm rate. The control with the same
-extra training on IXI only does not move, so the gain comes from the local
-data. Caveat: there are no healthy BraTS-site scans, so the "local" slices are
+The effect holds for both training seeds and is larger for the seed whose IXI
+model had more false alarms; with seed 11 and 50 local subjects the fine-tuned
+model reaches 82.7 pooled Dice at a 10% false-alarm rate, above the first
+in-domain model (79.6; its replicate is training). The control with the same
+extra training on IXI only does not improve on either seed, so the gain comes
+from the local data. Seed 11 has no 5-subject run. Caveat: there are no healthy BraTS-site scans, so the "local" slices are
 tumour-free slices of other tumour patients (see the next section).
 
 ### Where the false alarms are
@@ -167,9 +185,9 @@ Kept for transparency; none is used in a comparison above.
 - T2 only, one dataset pair (IXI → BraTS 2021), 2D slices.
 - 376 tumour-free test slices from 41 subjects: false-alarm rates have wide
   intervals, and the correlations in the false-alarm analysis are underpowered.
-- Bootstrap intervals cover test-subject sampling only. Repeated training
-  seeds for the IXI, thick-slice, fine-tuned and in-domain models are running
-  and will be added here.
+- Bootstrap intervals cover test-subject sampling only. Two training seeds
+  so far for the IXI and fine-tuned models; the thick-slice and in-domain
+  replicates are training, and two seeds remain a small sample.
 - No acquisition metadata for BraTS, and no healthy scans from the BraTS sites.
 
 ## Setup
